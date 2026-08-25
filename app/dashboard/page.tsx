@@ -1,59 +1,45 @@
-'use client'
+import CreateGroupForm from './create-group'
+import { getMyGroups, getUserProfile } from '@/app/actions/groups'
+import { redirect } from 'next/navigation'
 
-import { createClient } from '@/utils/supabase/client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-
-export default function DashboardPage() {
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const supabase = createClient()
-
-  useEffect(() => {
-    async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUserEmail(user.email || 'User')
-      } else {
-        router.push('/login')
-      }
-      setLoading(false)
-    }
-    getUser()
-  }, [router, supabase])
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+export default async function DashboardPage() {
+  const profile = await getUserProfile()
+  if (!profile) {
+    redirect('/login')
   }
 
-  if (loading) {
-    return <p style={{ textAlign: 'center', marginTop: '4rem' }}>Loading dashboard...</p>
-  }
+  const userGroups = await getMyGroups()
 
   return (
-    <div style={{ maxWidth: '600px', margin: '3rem auto', padding: '2rem', fontFamily: 'sans-serif', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
-        <h2>🎉 Selamat Datang!</h2>
-        <button 
-          onClick={handleLogout}
-          style={{ padding: '0.5rem 1rem', background: '#ff4d4f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-        >
-          Logout
-        </button>
-      </header>
+    <div className="p-6 max-w-4xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold">Halo, {profile.full_name || 'User'}!</h1>
+        <p className="text-gray-400">Selamat datang di dashboard kamu.</p>
+      </div>
 
-      <main style={{ marginTop: '1.5rem' }}>
-        <p>Anda berhasil login sebagai: <strong>{userEmail}</strong></p>
-        <div style={{ marginTop: '2rem', padding: '1rem', background: '#e6f7ff', borderRadius: '6px', border: '1px solid #91d5ff' }}>
-          🚀 <strong>Area Member Sosial Media Grup</strong>
-          <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#555' }}>
-            Nanti fitur postingan, grup, dan feed bakal dimunculin di halaman ini!
-          </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Form Bikin Grup */}
+        <div>
+          <CreateGroupForm />
         </div>
-      </main>
+
+        {/* Daftar Grup Saya */}
+        <div>
+          <h2 className="text-xl font-bold mb-4">Grup Saya</h2>
+          {userGroups.length === 0 ? (
+            <p className="text-gray-400">Kamu belum bergabung di grup mana pun.</p>
+          ) : (
+            <ul className="space-y-2">
+              {userGroups.map((item: any) => (
+                <li key={item.group_id} className="p-3 border rounded-lg">
+                  <h3 className="font-semibold">{item.groups?.name}</h3>
+                  <p className="text-sm text-gray-400">{item.groups?.description}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
