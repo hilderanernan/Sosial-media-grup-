@@ -3,55 +3,47 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function sendMessage(groupId: string, content: string) {
+export async function createPost(formData: FormData) {
   const supabase = await createClient()
+
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
+  if (!user) {
+    throw new Error('Kamu harus login terlebih dahulu')
+  }
 
-  const { data, error } = await supabase
-    .from('messages')
-    .insert([{ group_id: groupId, user_id: user.id, content }])
-    .select()
-    .single()
+  const content = formData.get('content') as string
 
-  if (error) throw new Error(error.message)
-  return data
-}
+  const { error } = await supabase.from('posts').insert({
+    user_id: user.id,
+    content: content,
+    is_public: true
+  })
 
-export async function promoteToPost(messageId: string, groupId: string, title: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  const { data, error } = await supabase
-    .from('posts')
-    .insert([{ message_id: messageId, group_id: groupId, user_id: user.id, title, is_public: true }])
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
+  if (error) {
+    throw new Error(error.message)
+  }
 
   revalidatePath('/dashboard')
-  return data
 }
 
-export async function getPublicFeed() {
+export async function getPublicPosts() {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('posts')
     .select(`
-      id,
-      title,
-      view_count,
-      created_at,
-      profiles:user_id (full_name, avatar),
-      groups:group_id (name),
-      messages:message_id (content)
+      *,
+      profiles (
+        full_name
+      )
     `)
     .eq('is_public', true)
     .order('created_at', { ascending: false })
 
-  if (error) console.error('Error fetching feed:', error)
+  if (error) {
+    console.error('Error fetching posts:', error.message)
+    return []
+  }
+
   return data || []
 }
