@@ -1,49 +1,47 @@
 'use client'
 
-import { createPost } from '@/app/actions/feed'
 import { useState } from 'react'
+import { createPost } from '@/app/actions/feed'
 
 export default function CreatePostForm() {
   const [loading, setLoading] = useState(false)
-  const [content, setContent] = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!content.trim()) return
-
     setLoading(true)
+
     try {
-      const formData = new FormData()
-      formData.append('content', content)
-      await createPost(formData)
-      setContent('')
-      alert('Postingan berhasil dikirim!')
+      const formData = new FormData(e.currentTarget)
+      const res = await createPost(formData)
+
+      if (res?.error) {
+        alert(`Gagal: ${res.error}`)
+      } else {
+        ;(e.target as HTMLFormElement).reset()
+      }
     } catch (err: any) {
-      alert('Gagal membuat postingan: ' + err.message)
+      alert(`Terjadi kesalahan: ${err?.message || 'Gagal terhubung'}`)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border rounded-lg space-y-3 bg-zinc-900">
-      <h3 className="font-semibold text-lg">Buat Postingan Baru</h3>
+    <form onSubmit={handleSubmit} className="p-4 border rounded-lg bg-zinc-900 space-y-4">
       <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+        name="content"
+        rows={3}
         placeholder="Apa yang lagi lu pikirin bro?"
-        className="w-full p-2 border rounded bg-black text-white focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none h-24"
         required
+        className="w-full p-2 bg-black border rounded-md text-white resize-none"
       />
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={loading || !content.trim()}
-          className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Posting...' : 'Kirim'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold disabled:opacity-50"
+      >
+        {loading ? 'Mengirim...' : 'Kirim'}
+      </button>
     </form>
   )
 }

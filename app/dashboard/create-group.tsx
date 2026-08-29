@@ -1,53 +1,52 @@
 'use client'
 
-import { createGroup } from '@/app/actions/groups'
 import { useState } from 'react'
+import { createGroup } from '@/app/actions/groups'
 
 export default function CreateGroupForm() {
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     setLoading(true)
+
     try {
-      await createGroup(formData)
-      alert('Grup berhasil dibuat!')
+      const formData = new FormData(e.currentTarget)
+      const res = await createGroup(formData)
+
+      if (res?.error) {
+        alert(`Gagal: ${res.error}`)
+      } else {
+        ;(e.target as HTMLFormElement).reset()
+      }
     } catch (err: any) {
-      alert('Gagal membuat grup: ' + err.message)
+      alert(`Terjadi kesalahan: ${err?.message || 'Gagal terhubung'}`)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form action={handleSubmit} className="p-4 border rounded-lg max-w-md space-y-4">
+    <form onSubmit={handleSubmit} className="p-4 border rounded-lg space-y-4">
       <h2 className="text-xl font-bold">Buat Grup Baru</h2>
-      
-      <div>
-        <label className="block text-sm font-medium">Nama Grup</label>
-        <input 
-          type="text" 
-          name="name" 
-          required 
-          className="w-full p-2 border rounded text-black" 
-          placeholder="Contoh: Komunitas Dev Termux"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium">Deskripsi</label>
-        <textarea 
-          name="description" 
-          className="w-full p-2 border rounded text-black" 
-          placeholder="Jelaskan tujuan grup ini..."
-        />
-      </div>
-
-      <button 
-        type="submit" 
+      <input
+        type="text"
+        name="name"
+        placeholder="Nama Grup"
+        required
+        className="w-full p-2 bg-black border rounded-md text-white"
+      />
+      <textarea
+        name="description"
+        placeholder="Deskripsi Grup"
+        className="w-full p-2 bg-black border rounded-md text-white resize-none"
+      />
+      <button
+        type="submit"
         disabled={loading}
-        className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+        className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold disabled:opacity-50"
       >
-        {loading ? 'Memproses...' : 'Buat Grup'}
+        {loading ? 'Membuat...' : 'Buat Grup'}
       </button>
     </form>
   )
