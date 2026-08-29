@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createGroup } from '@/actions/groups'
+import { createGroup } from '@/app/actions/groups'
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
