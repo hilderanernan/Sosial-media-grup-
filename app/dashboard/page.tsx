@@ -2,13 +2,9 @@ import CreateGroupForm from './create-group'
 import CreatePostForm from './create-post'
 import { getMyGroups, getUserProfile } from '@/app/actions/groups'
 import { getPublicPosts } from '@/app/actions/feed'
-import { redirect } from 'next/navigation'
 
 export default async function DashboardPage() {
   const profile = await getUserProfile()
-  if (!profile) {
-    redirect('/login')
-  }
 
   const [userGroups, posts] = await Promise.all([
     getMyGroups(),
@@ -19,13 +15,13 @@ export default async function DashboardPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-8">
       {/* Header Profile */}
       <div className="border-b pb-4">
-        <h1 className="text-2xl font-bold">Halo, {profile.full_name || 'User'}!</h1>
+        <h1 className="text-2xl font-bold">Halo, {profile?.full_name || 'User'}!</h1>
         <p className="text-gray-400 text-sm">Selamat datang di dashboard sosial media grup kamu.</p>
       </div>
 
       {/* Main Grid: Feed di Kiri, Sidebar Grup di Kanan */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
+
         {/* Kolom Kiri: Feed Postingan (Lebar 2 Kolom) */}
         <div className="md:col-span-2 space-y-6">
           <CreatePostForm />
