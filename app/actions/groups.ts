@@ -8,34 +8,53 @@ export async function getUserProfile() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase
+  const { data } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  return profile
+  return data
 }
 
 export async function createGroup(formData: FormData) {
   const supabase = await createClient()
+  
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
+  if (!user) {
+    return { error: 'Anda harus login terlebih dahulu' }
+  }
 
   const name = formData.get('name') as string
   const description = formData.get('description') as string
-  const type = (formData.get('type') as 'public' | 'private') || 'public'
 
-  const { data, error } = await supabase
+  if (!name || !name.trim()) {
+    return { error: 'Nama grup tidak boleh kosong' }
+  }
+
+  const { data: group, error: groupError } = await supabase
     .from('groups')
-    .insert([{ name, description, type, created_by: user.id }])
+    .insert({
+      name: name.trim(),
+      description: description?.trim() || '',
+      created_by: user.id
+    })
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+  if (groupError) {
+    return { error: groupError.message }
+  }
+
+  // Auto-join pembuat ke grup
+  await supabase.from('group_members').insert({
+    group_id: group.id,
+    user_id: user.id,
+    role: 'admin'
+  })
 
   revalidatePath('/dashboard')
-  return data
+  return { success: true }
 }
 
 export async function getMyGroups() {
@@ -43,67 +62,11 @@ export async function getMyGroups() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data } = await supabase
-    .from('group_members')
-    .select('group_id, role, groups(*)')
-    .eq('user_id', user.id)
-
-  return data || []
-}
-
-export async function getPublicGroups() {
-  const supabase = await createClient()
-
   const { data, error } = await supabase
-    .from('groups')
-    .select('*')
-    .eq('type', 'public')
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error('Error fetching public groups:', error.message)
-    return []
-  }
-
-  return data || []
-}
-
-export async function joinGroup(groupId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Kamu harus login terlebih dahulu')
-
-  const { error } = await supabase.from('group_members').insert({
-    group_id: groupId,
-    user_id: user.id,
-    role: 'member'
-  })
-
-  if (error) {
-    throw new Error('Gagal bergabung ke grup: ' + error.message)
-  }
-
-  revalidatePath('/groups')
-  revalidatePath('/dashboard')
-}
-
-export async function leaveGroup(groupId: string) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Kamu harus login terlebih dahulu')
-
-  const { error } = await supabase
     .from('group_members')
-    .delete()
-    .eq('group_id', groupId)
+    .select('group_id, groups(id, name, description)')
     .eq('user_id', user.id)
 
-  if (error) {
-    throw new Error('Gagal keluar dari grup: ' + error.message)
-  }
-
-  revalidatePath('/groups')
-  revalidatePath('/dashboard')
+  if (error) return []
+  return data || []
 }
